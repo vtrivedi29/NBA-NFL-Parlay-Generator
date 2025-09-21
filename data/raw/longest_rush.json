@@ -1,0 +1,402 @@
+[
+  {
+    "Player":"Travis Etienne Jr.",
+    "Value":71
+  },
+  {
+    "Player":"Jonathan Taylor",
+    "Value":68
+  },
+  {
+    "Player":"Trey Benson",
+    "Value":52
+  },
+  {
+    "Player":"RJ Harvey",
+    "Value":50
+  },
+  {
+    "Player":"Miles Sanders",
+    "Value":49
+  },
+  {
+    "Player":"Derrick Henry",
+    "Value":49
+  },
+  {
+    "Player":"Puka Nacua",
+    "Value":45
+  },
+  {
+    "Player":"James Cook",
+    "Value":44
+  },
+  {
+    "Player":"Jacory Croskey-Merritt",
+    "Value":42
+  },
+  {
+    "Player":"Jahmyr Gibbs",
+    "Value":42
+  },
+  {
+    "Player":"Josh Allen",
+    "Value":40
+  },
+  {
+    "Player":"Quinshon Judkins",
+    "Value":31
+  },
+  {
+    "Player":"Javonte Williams",
+    "Value":30
+  },
+  {
+    "Player":"Kyler Murray",
+    "Value":30
+  },
+  {
+    "Player":"Justin Fields",
+    "Value":27
+  },
+  {
+    "Player":"De'Von Achane",
+    "Value":26
+  },
+  {
+    "Player":"Nick Chubb",
+    "Value":25
+  },
+  {
+    "Player":"Bijan Robinson",
+    "Value":25
+  },
+  {
+    "Player":"Cam Skattebo",
+    "Value":24
+  },
+  {
+    "Player":"J.K. Dobbins",
+    "Value":23
+  },
+  {
+    "Player":"Bryce Young",
+    "Value":22
+  },
+  {
+    "Player":"Patrick Mahomes",
+    "Value":22
+  },
+  {
+    "Player":"Rhamondre Stevenson",
+    "Value":21
+  },
+  {
+    "Player":"D'Andre Swift",
+    "Value":20
+  },
+  {
+    "Player":"Kenneth Walker III",
+    "Value":20
+  },
+  {
+    "Player":"Will Shipley",
+    "Value":20
+  },
+  {
+    "Player":"Baker Mayfield",
+    "Value":20
+  },
+  {
+    "Player":"Justin Herbert",
+    "Value":19
+  },
+  {
+    "Player":"Jordan Mason",
+    "Value":19
+  },
+  {
+    "Player":"C.J. Stroud",
+    "Value":19
+  },
+  {
+    "Player":"Deebo Samuel",
+    "Value":19
+  },
+  {
+    "Player":"Lamar Jackson",
+    "Value":19
+  },
+  {
+    "Player":"David Montgomery",
+    "Value":18
+  },
+  {
+    "Player":"Breece Hall",
+    "Value":18
+  },
+  {
+    "Player":"Bo Nix",
+    "Value":18
+  },
+  {
+    "Player":"Malik Washington",
+    "Value":18
+  },
+  {
+    "Player":"Alvin Kamara",
+    "Value":18
+  },
+  {
+    "Player":"Tyler Allgeier",
+    "Value":17
+  },
+  {
+    "Player":"Ty Johnson",
+    "Value":17
+  },
+  {
+    "Player":"Ollie Gordon II",
+    "Value":16
+  },
+  {
+    "Player":"Saquon Barkley",
+    "Value":16
+  },
+  {
+    "Player":"J.J. McCarthy",
+    "Value":16
+  },
+  {
+    "Player":"Rachaad White",
+    "Value":16
+  },
+  {
+    "Player":"Savion Williams",
+    "Value":16
+  },
+  {
+    "Player":"Tyrod Taylor",
+    "Value":15
+  },
+  {
+    "Player":"Josh Jacobs",
+    "Value":15
+  },
+  {
+    "Player":"Blake Corum",
+    "Value":15
+  },
+  {
+    "Player":"Ashton Dulin",
+    "Value":15
+  },
+  {
+    "Player":"Russell Wilson",
+    "Value":15
+  },
+  {
+    "Player":"Kyren Williams",
+    "Value":15
+  },
+  {
+    "Player":"Geno Smith",
+    "Value":15
+  },
+  {
+    "Player":"Omarion Hampton",
+    "Value":15
+  },
+  {
+    "Player":"Isaiah Davis",
+    "Value":15
+  },
+  {
+    "Player":"Antonio Gibson",
+    "Value":15
+  },
+  {
+    "Player":"Jalen Hurts",
+    "Value":15
+  },
+  {
+    "Player":"Jayden Daniels",
+    "Value":14
+  },
+  {
+    "Player":"Chuba Hubbard",
+    "Value":14
+  },
+  {
+    "Player":"TreVeyon Henderson",
+    "Value":14
+  },
+  {
+    "Player":"Dak Prescott",
+    "Value":14
+  },
+  {
+    "Player":"Jordan Love",
+    "Value":14
+  },
+  {
+    "Player":"Caleb Williams",
+    "Value":13
+  },
+  {
+    "Player":"Ashton Jeanty",
+    "Value":13
+  },
+  {
+    "Player":"Drake Maye",
+    "Value":13
+  },
+  {
+    "Player":"Jeremy McNichols",
+    "Value":13
+  },
+  {
+    "Player":"Kenneth Gainwell",
+    "Value":13
+  },
+  {
+    "Player":"Mac Jones",
+    "Value":13
+  },
+  {
+    "Player":"Christian McCaffrey",
+    "Value":13
+  },
+  {
+    "Player":"DJ Giddens",
+    "Value":12
+  },
+  {
+    "Player":"Spencer Rattler",
+    "Value":12
+  },
+  {
+    "Player":"Michael Penix Jr.",
+    "Value":12
+  },
+  {
+    "Player":"James Conner",
+    "Value":12
+  },
+  {
+    "Player":"Kareem Hunt",
+    "Value":11
+  },
+  {
+    "Player":"Troy Franklin",
+    "Value":11
+  },
+  {
+    "Player":"Daniel Jones",
+    "Value":11
+  },
+  {
+    "Player":"Elijah Moore",
+    "Value":11
+  },
+  {
+    "Player":"Chase Brown",
+    "Value":11
+  },
+  {
+    "Player":"Kendre Miller",
+    "Value":10
+  },
+  {
+    "Player":"Isiah Pacheco",
+    "Value":10
+  },
+  {
+    "Player":"Kyle Monangai",
+    "Value":10
+  },
+  {
+    "Player":"Trevor Lawrence",
+    "Value":10
+  },
+  {
+    "Player":"Tony Pollard",
+    "Value":10
+  },
+  {
+    "Player":"Bucky Irving",
+    "Value":10
+  },
+  {
+    "Player":"Tyrone Tracy Jr.",
+    "Value":9
+  },
+  {
+    "Player":"Dyami Brown",
+    "Value":9
+  },
+  {
+    "Player":"Kalif Raymond",
+    "Value":9
+  },
+  {
+    "Player":"Brian Robinson Jr.",
+    "Value":9
+  },
+  {
+    "Player":"Emeka Egbuka",
+    "Value":9
+  },
+  {
+    "Player":"Sam Darnold",
+    "Value":9
+  },
+  {
+    "Player":"Aaron Jones",
+    "Value":9
+  },
+  {
+    "Player":"LeQuint Allen",
+    "Value":9
+  },
+  {
+    "Player":"Brian Thomas Jr.",
+    "Value":9
+  },
+  {
+    "Player":"Brock Purdy",
+    "Value":9
+  },
+  {
+    "Player":"Rico Dowdle",
+    "Value":9
+  },
+  {
+    "Player":"Jaylen Warren",
+    "Value":9
+  },
+  {
+    "Player":"Isaiah Bond",
+    "Value":9
+  },
+  {
+    "Player":"Bhayshul Tuten",
+    "Value":9
+  },
+  {
+    "Player":"Olamide Zaccheaus",
+    "Value":9
+  },
+  {
+    "Player":"A.J. Dillon",
+    "Value":9
+  },
+  {
+    "Player":"Matthew Golden",
+    "Value":9
+  },
+  {
+    "Player":"Chimere Dike",
+    "Value":9
+  }
+]

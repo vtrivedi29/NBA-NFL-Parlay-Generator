@@ -1,9 +1,13 @@
 import os
+import time
 import json
 import requests
+import pandas as pd
+from bs4 import BeautifulSoup
 from datetime import datetime
 from dotenv import load_dotenv
 
+#CONFIG
 load_dotenv()
 RAW_DATA_DIR = "data/raw"
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
@@ -11,14 +15,38 @@ os.makedirs(RAW_DATA_DIR, exist_ok=True)
 SGO_API_KEY = os.getenv("SGO_API_KEY")
 SGO_EVENTS_V2 = "https://api.sportsgameodds.com/v2/events"
 
+BASE_URL = "https://www.teamrankings.com/nfl/player-stat/"
+STATS = {
+    "pass_completions": "passing-plays-completed",
+    "pass_attempts": "passing-plays-attempted",
+    "passing_yards_gross": "passing-gross-yards",
+    "passing_touchdowns": "passing-touchdowns",
+    "interceptions": "passing-plays-intercepted",
+    "longest_pass": "passing-longest-yards",
+    "passing_rushing_yards": "passing-and-rushing-yards",
+    "qb_rating": "qb-rating-nfl",
+    "rush_attempts": "rushing-plays",
+    "rushing_yards": "rushing-net-yards",
+    "rushing_touchdowns": "rushing-touchdowns",
+    "longest_rush": "rushing-longest-yards",
+    "rushing_receiving_yards": "rushing-and-receiving-yards",
+    "rushing_receiving_touchdowns": "rushing-and-receiving-touchdowns",
+    "receptions": "receiving-receptions",
+    "receiving_yards": "receiving-yards",
+    "receiving_touchdowns": "receiving-touchdowns",
+    "longest_receptions": "receiving-longest-yards",
+    "pass_targets": "receiving-targeted",
+    "points_kicking": "kicking-points",
+    "solo_tackles": "defense-solo-tackles",
+    "total_touchdowns": "total-touchdowns",
+}
+
 def timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
+# API FUNCTIONS
 def filter_player_props(data: dict) -> list[dict]:
-    """
-    Extract only player props from the API response.
-    Player props always have a playerID ending with _NFL.
-    """
+    """Extract only player props with playerID ending in _NFL."""
     filtered = []
     for event in data.get("data", []):
         event_filtered = {"eventID": event.get("eventID"), "odds": {}}
@@ -57,15 +85,62 @@ def fetch_sgo_events(
 
     return r.json()
 
-def save_json(data, prefix="sgo_events"):
+def save_json(data, prefix="sgo_events_props"):
     out = os.path.join(RAW_DATA_DIR, f"{prefix}_{timestamp()}.json")
     with open(out, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"[SUCCESS] Saved → {out}")
     return out
 
+# SCRAPER FUNCTIONS
+def fetch_with_backoff(url: str, retries: int = 5) -> str:
+    """Fetch a webpage with exponential backoff."""
+    delay = 2
+    for attempt in range(retries):
+        try:
+            print(f"[INFO] Fetching {url} (attempt {attempt+1}) …")
+            r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            return r.text
+        except requests.RequestException as e:
+            print(f"[WARN] Request failed: {e}")
+            if attempt < retries - 1:
+                print(f"[INFO] Retrying in {delay}s …")
+                time.sleep(delay)
+                delay *= 2  # exponential backoff
+            else:
+                raise RuntimeError(f"Failed after {retries} attempts: {url}")
+
+def parse_table(html: str) -> pd.DataFrame:
+    """Parse the table and return only Player + Value columns."""
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table")
+    if not table:
+        raise ValueError("No table found in HTML")
+
+    df = pd.read_html(str(table))[0]
+
+    # Ensure only Player + Value
+    if "Player" not in df.columns or "Value" not in df.columns:
+        raise ValueError("Expected Player and Value columns not found")
+
+    df = df[["Player", "Value"]]
+    return df
+
+def save_data(df: pd.DataFrame, stat_name: str):
+    """Save DataFrame as CSV and JSON with universal filenames."""
+    csv_path = os.path.join(RAW_DATA_DIR, f"{stat_name}.csv")
+    json_path = os.path.join(RAW_DATA_DIR, f"{stat_name}.json")
+
+    df.to_csv(csv_path, index=False)
+    df.to_json(json_path, orient="records", indent=2)
+
+    print(f"[SUCCESS] Saved {stat_name} → {csv_path}, {json_path}")
+
+# MAIN
 def main():
     print("=== NFL Odds Extraction: SportsGameOdds with Player Prop Filtering ===")
+    data = None
 
     try:
         # Fetch first page
@@ -77,19 +152,33 @@ def main():
         )
 
         # Save full dataset
-        save_json(data, prefix="sgo_events_full")
-
-        # Save filtered player props
-        filtered = filter_player_props(data)
-        save_json(filtered, prefix="sgo_events_playerprops")
-
+        save_json(data, prefix="sgo_events_props")
         print(f"[INFO] Retrieved {len(data.get('data', []))} events total.")
-        print(f"[INFO] Filtered {len(filtered)} events containing player props.")
 
     except Exception as e:
         print("[ERROR] Could not fetch SGO data:", e)
 
-    print("[DONE] API extraction complete.")
+    if data:
+        filtered = filter_player_props(data)
+        save_json(filtered, prefix="sgo_events_playerprops_local")
+        print(f"[SUCCESS] Filtered {len(filtered)} events → sgo_events_playerprops_local")
+    else:
+        print("[WARN] No data available to filter.")
+
+    print("[DONE] API filter complete.")
+
+    print("=== Scraping TeamRankings Stats ===")
+    for stat_name, path in STATS.items():
+        url = BASE_URL + path
+        try:
+            html = fetch_with_backoff(url)
+            df = parse_table(html)
+            save_data(df, stat_name)
+            time.sleep(5)  # polite delay
+        except Exception as e:
+            print(f"[ERROR] Failed to process {stat_name}: {e}")
+    print("[DONE] Scraping complete.")
+
 
 if __name__ == "__main__":
     main()
