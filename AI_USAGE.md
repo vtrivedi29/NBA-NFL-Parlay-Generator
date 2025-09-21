@@ -235,3 +235,47 @@ This lets you:
 - Guarantee that only true player props are retained.  
 
 I also noted that the script could be extended to batch-process every saved JSON in your `data/raw/` directory, further streamlining your workflow.
+
+## Prompt
+I want to scrape TeamRankings NFL player stats pages one at a time to respect the servers. The pages include passing, rushing, receiving, kicking, and defensive categories. I need exponential backoff, a retry limit, and ideally, I’d like all of these stats merged into a single dataset per player.
+
+## Response Summary
+I provided a Python scraper that:
+- Iterates over the specified TeamRankings stat pages (22 categories).
+- Uses **exponential backoff** with retries to handle request failures safely.
+- Waits **5 seconds between successful requests** to avoid hammering the server.
+- Extracts each page’s HTML table using **BeautifulSoup** and **pandas**.
+- Merges the results into a **single DataFrame** keyed on the `"Player"` column, so each player has one row with multiple stat columns.
+- Saves the merged dataset as both **CSV and JSON** with timestamped filenames (e.g., `nfl_player_stats_merged_20250920_211255.csv`).
+
+This ensures you end up with a complete dataset combining all categories while keeping the scraping respectful and resilient.
+
+## Prompt
+When scraping TeamRankings NFL player stats, I noticed each table already has a header: Rank, Player, Team, Pos, and Value. I’m only interested in Player and Value. I no longer want to merge across stats, but I do want to drop the unnecessary columns and save the files with universal names so they can be recalled later in the code.
+
+## Response Summary
+I revised the scraper design to:
+- Fetch one stat page at a time (with exponential backoff and polite delays).
+- Parse the HTML table and reduce it to only **Player** and **Value** columns.
+- Drop the extra columns (`Rank`, `Team`, `Pos`) from the DataFrame.
+- Save each stat dataset separately as **CSV and JSON**, using consistent filenames like:
+  - `pass_completions.csv` / `pass_completions.json`
+  - `receiving_yards.csv` / `receiving_yards.json`
+  - etc.
+- Keep timestamping optional for raw backups, but ensure universal names exist for easy recall in downstream code.
+
+This way, each stat is stored independently, lightweight, and immediately reusable in the ETL pipeline without additional cleaning or merging.
+
+## Prompt
+Can we streamline the ETL process so that instead of saving every individual stat file in `data/raw`, we end up with just the compiled dataset? This dataset should merge all TeamRankings stats and SportsGameOdds props into a single CSV/JSON file, ready for enrichment with the DeepSeek API.
+
+## Response Summary
+I refactored the workflow so that:
+- **Scraping**: Each TeamRankings stat page is fetched and reduced to only `Player` and `Value` columns. These are held in memory instead of being saved individually.
+- **Transforming**: All stat DataFrames are merged on the `Player` column (normalized to `FIRSTNAME_LASTNAME`).  
+- **Props Integration**: SportsGameOdds player props JSON is parsed, extracting `oddID`, `statID`, `playerID`, and bookmaker odds. These are merged with the stats DataFrame by player.  
+- **Final Output**: Only the **compiled dataset** is written to `data/raw/` as:
+  - `players_compiled_<timestamp>.csv`
+  - `players_compiled_<timestamp>.json`
+
+This eliminates clutter from multiple stat files, keeps the pipeline clean, and ensures there’s a single dataset ready for DeepSeek enrichment.

@@ -4,6 +4,7 @@ import json
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
+from glob import glob
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -14,8 +15,8 @@ os.makedirs(RAW_DATA_DIR, exist_ok=True)
 
 SGO_API_KEY = os.getenv("SGO_API_KEY")
 SGO_EVENTS_V2 = "https://api.sportsgameodds.com/v2/events"
-
 BASE_URL = "https://www.teamrankings.com/nfl/player-stat/"
+
 STATS = {
     "pass_completions": "passing-plays-completed",
     "pass_attempts": "passing-plays-attempted",
@@ -93,6 +94,10 @@ def save_json(data, prefix="sgo_events_props"):
     return out
 
 # SCRAPER FUNCTIONS
+def normalize_name(name: str) -> str:
+    """Convert 'First Last' -> 'FIRST_LAST' to match 'playerID'."""
+    return name.strip().upper().replace(" ", "_").replace(".", "").replace("'", "")
+
 def fetch_with_backoff(url: str, retries: int = 5) -> str:
     """Fetch a webpage with exponential backoff."""
     delay = 2
@@ -111,7 +116,7 @@ def fetch_with_backoff(url: str, retries: int = 5) -> str:
             else:
                 raise RuntimeError(f"Failed after {retries} attempts: {url}")
 
-def parse_table(html: str) -> pd.DataFrame:
+def parse_table(html: str, stat_name: str) -> pd.DataFrame:
     """Parse the table and return only Player + Value columns."""
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table")
@@ -124,18 +129,70 @@ def parse_table(html: str) -> pd.DataFrame:
     if "Player" not in df.columns or "Value" not in df.columns:
         raise ValueError("Expected Player and Value columns not found")
 
-    df = df[["Player", "Value"]]
+    df = df[["Player", "Value"]].copy()
+    df["Player"] = df["Player"].apply(normalize_name)
+    df = df.rename(columns = {"Value": stat_name})
     return df
 
-def save_data(df: pd.DataFrame, stat_name: str):
-    """Save DataFrame as CSV and JSON with universal filenames."""
-    csv_path = os.path.join(RAW_DATA_DIR, f"{stat_name}.csv")
-    json_path = os.path.join(RAW_DATA_DIR, f"{stat_name}.json")
+def scrape_stats() -> pd.DataFrame:
+    """Scrape all TeamRankings stats and merge."""
+    merged_df = None
+    for stat_name, path in STATS.items():
+        url = BASE_URL + path
+        try:
+            html = fetch_with_backoff(url)
+            df = parse_table(html, stat_name)
 
-    df.to_csv(csv_path, index=False)
-    df.to_json(json_path, orient="records", indent=2)
+            if merged_df is None:
+                merged_df = df
+            else:
+                merged_df = pd.merge(merged_df, df, on="Player", how="outer")
 
-    print(f"[SUCCESS] Saved {stat_name} → {csv_path}, {json_path}")
+            print(f"[INFO] Added {stat_name} ({len(df)} rows)")
+            time.sleep(5)
+        except Exception as e:
+            print(f"[ERROR] Failed to process {stat_name}: {e}")
+
+    return merged_df
+
+# DATA COMPILING FUNCTIONS
+def load_player_props() -> pd.DataFrame:
+    """Load player props JSON and flatten bookmaker odds."""
+    props_files = glob(os.path.join(RAW_DATA_DIR, "sgo_events_playerprops_local*.json"))
+    if not props_files:
+        print("[WARN] No props file found.")
+        return pd.DataFrame()
+
+    latest_file = sorted(props_files)[-1]
+    print(f"[INFO] Using latest props file: {latest_file}")
+
+    with open(latest_file, "r") as f:
+        data =json.load(f)
+
+    rows = []
+    for event in data:
+        for oddID, market in event.get("odds", {}).items():
+            row = {
+                "playerID": market.get("playerID"),
+                "statID": market.get("statID"),
+                "oddID": oddID,
+            }
+            # flatten bookmaker odds
+            for book, details in market.get("byBookmaker", {}).items():
+                row[book] = details.get("odds", None)
+            rows.append(row)
+
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df["Player"] = df["playerID"].apply(lambda pid: "_".join(pid.split("_")[:2]) if pid else None)
+    return df
+
+def save_compiled(df: pd.DataFrame, prefix="players_compiled"):
+    out_csv = os.path.join(RAW_DATA_DIR, f"{prefix}_{timestamp()}.csv")
+    out_json = os.path.join(RAW_DATA_DIR, f"{prefix}_{timestamp()}.json")
+    df.to_csv(out_csv, index=False)
+    df.to_json(out_json, orient="records", indent=2)
+    print(f"[SUCCESS] Saved compiled data → {out_csv}, {out_json}")
 
 # MAIN
 def main():
@@ -167,18 +224,21 @@ def main():
 
     print("[DONE] API filter complete.")
 
-    print("=== Scraping TeamRankings Stats ===")
-    for stat_name, path in STATS.items():
-        url = BASE_URL + path
-        try:
-            html = fetch_with_backoff(url)
-            df = parse_table(html)
-            save_data(df, stat_name)
-            time.sleep(5)  # polite delay
-        except Exception as e:
-            print(f"[ERROR] Failed to process {stat_name}: {e}")
-    print("[DONE] Scraping complete.")
+    print("=== Compiling Stats + Props into One Dataset ===")
+    stats_df = scrape_stats()
+    print(f"[INFO] Scraped stats for {len(stats_df)} players across {len(stats_df.columns)-1} categories.")
 
+    props_df = load_player_props()
+    print(f"[INFO] Loaded {len(props_df)} props.")
+
+    if not props_df.empty:
+        compiled_df = pd.merge(stats_df, props_df, on="Player", how="outer")
+    else:
+        compiled_df = stats_df
+
+    save_compiled(compiled_df)
+
+    print("[DONE] Compilation complete.")
 
 if __name__ == "__main__":
     main()
