@@ -1,0 +1,16 @@
+{
+  "recommended_bets": [
+    {
+      "player": "AARON_JONES",
+      "bet_type": "firstTouchdown yes",
+      "odds": "+650",
+      "confidence": 0.6
+    },
+    {
+      "player": "AARON_JONES",
+      "bet_type": "lastTouchdown yes",
+      "odds": "+700",
+      "confidence": 0.5
+    }
+  ]
+}

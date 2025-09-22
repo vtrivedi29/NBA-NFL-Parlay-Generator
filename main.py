@@ -7,11 +7,12 @@ from bs4 import BeautifulSoup
 from glob import glob
 from datetime import datetime
 from dotenv import load_dotenv
+from deepseek_enrichment import run_deepseek_enrichment
 
 #CONFIG
 load_dotenv()
 RAW_DATA_DIR = "data/raw"
-os.makedirs(RAW_DATA_DIR, exist_ok=True)
+ENRICHED_DATA_DIR = "data/enriched"
 
 SGO_API_KEY = os.getenv("SGO_API_KEY")
 SGO_EVENTS_V2 = "https://api.sportsgameodds.com/v2/events"
@@ -41,9 +42,6 @@ STATS = {
     "solo_tackles": "defense-solo-tackles",
     "total_touchdowns": "total-touchdowns",
 }
-
-def timestamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # API FUNCTIONS
 def filter_player_props(data: dict) -> list[dict]:
@@ -94,10 +92,6 @@ def save_json(data, prefix="sgo_events_props"):
     return out
 
 # SCRAPER FUNCTIONS
-def normalize_name(name: str) -> str:
-    """Convert 'First Last' -> 'FIRST_LAST' to match 'playerID'."""
-    return name.strip().upper().replace(" ", "_").replace(".", "").replace("'", "")
-
 def fetch_with_backoff(url: str, retries: int = 5) -> str:
     """Fetch a webpage with exponential backoff."""
     delay = 2
@@ -194,6 +188,49 @@ def save_compiled(df: pd.DataFrame, prefix="players_compiled"):
     df.to_json(out_json, orient="records", indent=2)
     print(f"[SUCCESS] Saved compiled data → {out_csv}, {out_json}")
 
+# MISC FUNCTIONS
+def timestamp() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def normalize_name(name: str) -> str:
+    """Convert 'First Last' -> 'FIRST_LAST' to match 'playerID'."""
+    return name.strip().upper().replace(" ", "_").replace(".", "").replace("'", "")
+
+def calculate_parlay_odds(odds_list):
+    """Convert American odds list into decimal multipliers, then back to parlay odds."""
+    decimal_odds = []
+    for odd in odds_list:
+        if int(odd) > 0:  # positive American odds
+            decimal_odds.append((odd / 100) + 1)
+        else:  # negative American odds
+            decimal_odds.append((100 / abs(odd)) + 1)
+    parlay_decimal = 1
+    for d in decimal_odds:
+        parlay_decimal *= d
+    # Convert back to American odds
+    if parlay_decimal >= 2:
+        parlay_american = int((parlay_decimal - 1) * 100)
+    else:
+        parlay_american = int(-100 / (parlay_decimal - 1))
+    return parlay_decimal, parlay_american
+
+def drop_players_with_no_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Drop players who have null values for all stat columns.
+    This ensures we only keep players with at least one meaningful stat.
+    """
+    # Identify stat columns = everything except ID/props/metadata
+    non_stat_cols = {"Player", "playerID", "statID", "oddID", "odds", "confidence", "bet_type"}
+    stat_cols = [col for col in df.columns if col not in non_stat_cols]
+
+    print(f"[INFO] Checking {len(df)} players across {len(stat_cols)} stat columns")
+
+    # Drop rows where ALL stat columns are NaN
+    cleaned = df.dropna(subset=stat_cols, how="all")
+    print(f"[INFO] After cleaning: {len(cleaned)} players remain")
+
+    return cleaned
+
 # MAIN
 def main():
     print("=== NFL Odds Extraction: SportsGameOdds with Player Prop Filtering ===")
@@ -236,9 +273,51 @@ def main():
     else:
         compiled_df = stats_df
 
+    compiled_df = drop_players_with_no_stats(compiled_df)
+
     save_compiled(compiled_df)
 
-    print("[DONE] Compilation complete.")
+    print("[DONE] Compilation and filtering complete.")
+
+    print("=== DeepSeek Enrichment + Parlay Builder ===")
+
+    compiled_files = sorted([f for f in os.listdir(RAW_DATA_DIR) if f.startswith("players_compiled") and f.endswith(".json")])
+    if not compiled_files:
+        print("[ERROR] No compiled dataset found in data/raw/")
+        return
+    latest_file = os.path.join(RAW_DATA_DIR, compiled_files[-1])
+
+    enriched_df = run_deepseek_enrichment(latest_file)
+
+    while True:
+        try:
+            num_legs = int(input("Enter number of legs for your parlay: "))
+            break
+        except ValueError:
+            print("[ERROR] Please enter a valid integer.")
+
+    if num_legs > len(enriched_df):
+        print("[WARN] Not enough recommended bets, reducing to available bets.")
+        num_legs = len(enriched_df)
+
+    parlay_bets = enriched_df.sort_values(by="confidence", ascending=False).head(num_legs)
+
+    while True:
+        try:
+            stake = float(input("Enter your stake ($): "))
+            break
+        except ValueError:
+            print("[ERROR] Please enter a valid number.")
+
+    odds_list = parlay_bets["odds"].tolist()
+    parlay_decimal, parlay_american = calculate_parlay_odds(odds_list)
+    payout = round(stake * parlay_decimal, 2)
+
+    print("\n=== Recommended Parlay ===")
+    print(parlay_bets[["player", "bet_type", "odds", "confidence"]])
+    print(f"\nParlay odds: {parlay_american} (decimal {round(parlay_decimal, 2)})")
+    print(f"Stake: ${stake:.2f}")
+    print(f"Potential payout: ${payout:.2f}")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,14 @@
+[
+  {
+    "player": "AARON_JONES",
+    "bet_type": "first_touchdown_yes",
+    "odds": "+650",
+    "confidence": 0.7
+  },
+  {
+    "player": "AARON_JONES",
+    "bet_type": "last_touchdown_yes",
+    "odds": "+700",
+    "confidence": 0.4
+  }
+]
