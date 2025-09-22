@@ -279,3 +279,44 @@ I refactored the workflow so that:
   - `players_compiled_<timestamp>.json`
 
 This eliminates clutter from multiple stat files, keeps the pipeline clean, and ensures there’s a single dataset ready for DeepSeek enrichment.
+
+## Prompt
+Now that we have the compiled dataset of player stats and odds, I want to integrate DeepSeek’s API. The goal is for DeepSeek to run pattern recognition on the compiled data, identify misalignments between stats and betting odds, and recommend bets that are more likely to hit than their implied odds. Based on user input of how many legs they want in a parlay, DeepSeek should select that number of bets, calculate the combined parlay odds, and then, given a stake amount, calculate the potential payout. The AI logic should live in a `deepseek_enrichment.py` file (saving enriched results in `data/enriched/`), and all input/output logic should be handled in `main.py`.
+
+## Response Summary
+I structured the solution into two files:
+
+1. **`deepseek_enrichment.py`**  
+   - Contains a function `run_deepseek_enrichment()` that loads the compiled dataset and sends it to the DeepSeek API.  
+   - DeepSeek analyzes the data, detects misalignments, and returns recommended bets with confidence scores.  
+   - Saves the enriched results into `data/enriched/enriched_<timestamp>.json`.  
+   - Returns the results as a DataFrame for downstream use.  
+
+2. **`main.py`**  
+   - Handles user interaction:
+     - Ask how many legs the parlay should have.  
+     - Ask for the stake amount.  
+   - Selects the top recommended bets by confidence.  
+   - Calculates combined parlay odds using American → decimal conversions.  
+   - Computes potential payout given the user’s stake.  
+   - Displays the selected bets, parlay odds, stake, and payout summary.  
+
+This completes the enrichment and analysis portion of the ETL pipeline: from raw odds/stats → compiled dataset → AI-driven insights → user-facing parlay builder with payout calculations.
+
+# AI_USAGE.md Entry
+
+## Prompt
+I got a runtime error when calling `run_deepseek_enrichment`:  
+```
+TypeError: list indices must be integers or slices, not str
+```
+I also want to drop players who don’t have any actual stats linked to them (all stat columns are null).
+
+## Response Summary
+The error happened because DeepSeek returned a **list of bets directly**, not a dictionary with `"bets"`.  
+I fixed this by adding a check in `run_deepseek_enrichment`:
+- If the response is a list → load it directly into a DataFrame.  
+- If it’s a dict with `"bets"` → use that key.  
+- Otherwise → raise an error.
+
+For filtering players, I added a helper `drop_players_with_no_stats()` that removes rows where **all stat columns are null** (keeping only players with at least one valid stat). This is applied after merging stats and odds to keep the dataset clean.
